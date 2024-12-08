@@ -1,0 +1,165 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "SSU - Ocean",
+    Icon = 0,
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "by Voncre",
+    Theme = "Ocean",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "SSU"
+    }
+})
+
+local AutoFarmTab = Window:CreateTab("Auto Farm!", 4483362458)
+local MiscTab = Window:CreateTab("Misc", 4483362458)
+
+local swordDamage = 0
+local areaLevelFilter = 0
+local autoFarmEnabled = false
+local npcIndex = 1
+
+local function IsNpcValid(npc)
+    if npc and npc:IsA("Model") then
+        local dataFolder = npc:FindFirstChild("Data")
+        if dataFolder then
+            local npcLevels = dataFolder:FindFirstChild("Levels")
+            if npcLevels then
+                npcLevels = tonumber(npcLevels.Value)
+                return areaLevelFilter == 0 or npcLevels == areaLevelFilter
+            end
+        end
+    end
+    return false
+end
+
+local function GetFilteredNpcs()
+    local npcList = {}
+    for _, npc in ipairs(workspace.Npcs:GetChildren()) do
+        if IsNpcValid(npc) then
+            table.insert(npcList, npc)
+        end
+    end
+    return npcList
+end
+
+local function MoveToNpc(npcPosition)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(npcPosition)
+    end
+end
+
+local function AttackNpc(npc)
+    local args = {
+        [1] = npc,
+        [2] = swordDamage
+    }
+
+    local enemyHitEvent = game:GetService("ReplicatedStorage"):FindFirstChild("EnemyHitEvent")
+
+    if enemyHitEvent then
+        for _ = 1, 10 do
+            enemyHitEvent:FireServer(unpack(args))
+            wait(0.1)
+        end
+    end
+end
+
+local function TeleportAndAttack()
+    while autoFarmEnabled do
+        local npcList = GetFilteredNpcs()
+
+        if #npcList > 0 then
+            npcIndex = (npcIndex % #npcList) + 1
+            local npc = npcList[npcIndex]
+
+            if npc then
+                local npcPosition
+                if npc.PrimaryPart then
+                    npcPosition = npc.PrimaryPart.Position
+                else
+                    local part = npc:FindFirstChildWhichIsA("BasePart")
+                    if part then
+                        npcPosition = part.Position
+                    else
+                        continue
+                    end
+                end
+
+                MoveToNpc(npcPosition)
+                wait(0.3)
+                AttackNpc(npc)
+                wait(0.47)
+            end
+        else
+            wait(2)
+        end
+    end
+end
+
+AutoFarmTab:CreateToggle({
+    Name = "Auto Farm",
+    CurrentValue = false,
+    Flag = "Toggle1",
+    Callback = function(enabled)
+        autoFarmEnabled = enabled
+
+        if autoFarmEnabled then
+            npcIndex = 0
+            TeleportAndAttack()
+        end
+    end
+})
+
+AutoFarmTab:CreateInput({
+    Name = "Sword Damage",
+    CurrentValue = "",
+    PlaceholderText = "Input Damage",
+    RemoveTextAfterFocusLost = false,
+    Flag = "Input1",
+    Callback = function(value)
+        swordDamage = tonumber(value) or 21000
+    end
+})
+
+AutoFarmTab:CreateInput({
+    Name = "Area",
+    CurrentValue = "",
+    PlaceholderText = "Input Area",
+    RemoveTextAfterFocusLost = false,
+    Flag = "Input2",
+    Callback = function(value)
+        areaLevelFilter = tonumber(value) or 0
+    end
+})
+
+local codes = {
+    "starterboost", "extragems", "ghaztguystudios", "spacesimultimate",
+    "omgrelease", "7202023", "ytfrogroblox", "desertninja",
+    "secretboostercode1", "secretboostercode2", "secretboostercode3",
+    "secretboostercode4", "secretboostercode5", "secretboostercode6",
+    "verysecretboostercode", "halloweenboostercode", "400kboostercode",
+    "sinisterboostercode", "deaginsmells", "iwannabetheguy",
+    "ultimatehatchspeed", "update1", "throwback", "update2",
+    "skyislands", "update3", "200kvisits", "update5", "sorryfordelay",
+    "update6", "rebirthupdate", "autumnevent", "biggestupdate",
+    "halloween", "biggestevent", "400kvisits", "thanksall",
+    "parttwo", "sinisterupdate", "smallupdate", "newseason"
+}
+
+local Button = MiscTab:CreateButton({
+    Name = "Redeem All Codes",
+    Callback = function()
+        local codeService = game:GetService("ReplicatedStorage"):FindFirstChild("Code")
+        
+        if codeService and codeService:IsA("RemoteFunction") then
+            codeService:InvokeServer(unpack(codes))
+        end
+    end
+})
+
